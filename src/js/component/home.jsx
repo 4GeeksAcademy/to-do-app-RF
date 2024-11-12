@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 
-// URL de tu API (reemplázala con la correcta)
-const API_URL = "https://playground.4geeks.com/todo/users/frqmx";
+// URL de tu API 
+const API_URL = "https://playground.4geeks.com/todo";
+const user = "frqmx";
 
 const Home = () => {
     const [nuevoTodo, setNuevoTodo] = useState("");  // Estado para la nueva tarea
@@ -10,31 +11,28 @@ const Home = () => {
     // Obtener las tareas de la API
     const getTodos = async () => {
         try {
-            const response = await fetch(API_URL);
+            const response = await fetch(`${API_URL}/users/${user}`);
             if (response.ok) {
                 const data = await response.json();
-                setTodos(Array.isArray(data) ? data : []); // Asegurarnos de que es un array
+                console.log(data);
+                setTodos(Array.isArray(data.todos) ? data.todos : []); 
             } else {
-                console.error("Error al obtener las tareas:", response.status);
-                createUserTodos(); // Si no existen tareas, creamos un usuario con tareas vacías
+                console.error("Error al obtener las tareas:", response);
+                createUserTodos();
             }
         } catch (error) {
             console.error("Error al hacer la solicitud GET:", error);
         }
     };
-
     // Crear una lista de tareas vacía en la API si no existe
     const createUserTodos = async () => {
         try {
-            const response = await fetch(API_URL, {
+            const response = await fetch(`${API_URL}/users/${user}`, {
                 method: "POST",
-                body: JSON.stringify([]), // Lista vacía
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                
             });
             if (response.ok) {
-                setTodos([]); // Actualizamos el estado a lista vacía
+                getTodos()
                 console.log("Lista de tareas creada.");
             } else {
                 console.error("Error al crear lista de tareas:", response.status);
@@ -43,20 +41,21 @@ const Home = () => {
             console.error("Error al crear la lista:", error);
         }
     };
-
+    
     // Función para actualizar las tareas en la API
     const updateTodos = async (newTodos) => {
         try {
-            const response = await fetch(API_URL, {
-                method: "PUT", // Usamos PUT para actualizar la lista
-                body: JSON.stringify(newTodos), // Convertimos la lista de tareas a JSON
+            const response = await fetch(`${API_URL}/todos/${user}`, {
+                method: "POST",
+                body: JSON.stringify(newTodos),
                 headers: {
                     "Content-Type": "application/json",
                 },
             });
-
+    
             if (response.ok) {
-                setTodos(newTodos); // Actualizamos el estado con las nuevas tareas
+                const data = await response.json()
+                setTodos([...todos,data]);
                 console.log("Tareas actualizadas.");
             } else {
                 console.error("Error al actualizar tareas:", response.status);
@@ -68,16 +67,43 @@ const Home = () => {
 
     // Función para agregar una nueva tarea
     const handleAddTodo = () => {
-        if (nuevoTodo.trim() === "") return; // Evitamos agregar tareas vacías
-        const newTodos = [...todos, { label: nuevoTodo, done: false }];
-        setNuevoTodo(""); // Limpiamos el campo de texto
-        updateTodos(newTodos); // Actualizamos las tareas en la API
+        if (nuevoTodo.trim() === "") return;
+        const newTodo = { label: nuevoTodo, is_done: false };
+        setNuevoTodo("");
+        updateTodos(newTodo); // Envía sólo una tarea
+    };
+
+    const removeTodos = async () => {
+        try {
+            const response = await fetch(`${API_URL}/users/${user}`, {
+                method: "DELETE",
+                    
+            });
+    
+            if (response.ok) {
+             getTodos() 
+                console.log("Todas las tareas han sido eliminadas.");
+            } else {
+                console.error("Error al eliminar todas las tareas:", response.status);
+            }
+        } catch (error) {
+            console.error("Error al hacer la solicitud de eliminación:", error);
+        }
     };
 
     // Función para eliminar una tarea
-    const handleDeleteTodo = (index) => {
-        const newTodos = todos.filter((_, i) => i !== index);
-        updateTodos(newTodos); // Actualizamos la lista luego de eliminar la tarea
+    const handleDeleteTodo = async (id) => {
+        try { 
+            const response = await fetch(`${API_URL}/todos/${id}`, {
+                method : "DELETE"
+            }) 
+            if (response.ok){
+                getTodos()
+            }
+            
+        } catch (error) {
+           console.log(error) 
+        }
     };
 
     // Función para manejar el cambio en el input de nueva tarea
@@ -118,13 +144,16 @@ const Home = () => {
                         {todo.label}
                         <button
                             className="btn btn-danger btn-sm"
-                            onClick={() => handleDeleteTodo(index)}
+                            onClick={() => handleDeleteTodo(todo.id)}
                         >
                             Eliminar
                         </button>
                     </li>
                 ))}
             </ul>
+            <button className="btn btn-danger btn-sm" onClick={() => removeTodos()}>
+                Eliminar todas las tareas
+            </button>
         </div>
     );
 };
